@@ -40,7 +40,7 @@ for pnt_idx = 1:mpm_points.num_points
         else
           % Plastic flow
           S2 = material_properties.mu_2*p_trial;
-          alpha = material_properties.xi*material_properties.shear_modulus*dt*sqrt(p_trial);
+          alpha = material_properties.xi*material_properties.G*dt*sqrt(p_trial);
           B = S2 + tau_bar_trial + alpha;
           H = S2*tau_bar_trial + S0*alpha;
           tau_bar_new = 2.0*H/(B + sqrt(B*B - 4.0*H));
