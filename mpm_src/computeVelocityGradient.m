@@ -17,13 +17,13 @@ function [ mpm_points ] = computeVelocityGradient( physics_grid,mpm_points,basis
                 for x_idx = grid_idx(1):grid_idx(1)+1
                     element_node_flat_idx = (x_idx-grid_idx(1)+1) + (y_idx-grid_idx(2))*2 + (z_idx-grid_idx(3))*4;
                     
-                    grid_flat_idx = x_idx + (y_idx-1)*physics_grid.num_grid_nodes(1) + (z_idx-1)*physics_grid.num_grid_nodes(1)*physics_grid.num_grid_nodes(2);
+                    grid_flat_idx = x_idx+1 + (y_idx)*physics_grid.num_grid_nodes(1) + (z_idx)*physics_grid.num_grid_nodes(1)*physics_grid.num_grid_nodes(2);
                     
                     basis_grad(1) = basis_functions.dN{element_node_flat_idx,1}(q_reference);
                     basis_grad(2) = basis_functions.dN{element_node_flat_idx,2}(q_reference);
                     basis_grad(3) = basis_functions.dN{element_node_flat_idx,3}(q_reference);
                     
-                    vel_grad = vel_grad + basis_grad*physics_grid.rasterized_velocity(pt_num,:);
+                    vel_grad = vel_grad + basis_grad*physics_grid.rasterized_velocity(grid_flat_idx,:);
                 end
             end
         end

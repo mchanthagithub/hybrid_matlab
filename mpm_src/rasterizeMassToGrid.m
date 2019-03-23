@@ -4,6 +4,7 @@ function [ physics_grid ] = rasterizeMassToGrid( physics_grid,mpm_points,basis_f
         
         % Indices of lower left corner node of element the mpm point is in
         grid_idx = floor((mpm_points.q(pt_num,:) - physics_grid.min)/physics_grid.delta);
+%         grid_idx(grid_idx<0) = 0;
         % Coordinates of lower left node
         min_node_coord = [grid_idx(1) grid_idx(2) grid_idx(3)]*physics_grid.delta + physics_grid.min;
         
@@ -15,7 +16,10 @@ function [ physics_grid ] = rasterizeMassToGrid( physics_grid,mpm_points,basis_f
                 for x_idx = grid_idx(1):grid_idx(1)+1
                     element_node_flat_idx = (x_idx-grid_idx(1)+1) + (y_idx-grid_idx(2))*2 + (z_idx-grid_idx(3))*4;
                                         
-                    grid_flat_idx = x_idx + (y_idx-1)*physics_grid.num_grid_nodes(1) + (z_idx-1)*physics_grid.num_grid_nodes(1)*physics_grid.num_grid_nodes(2);
+                    grid_flat_idx = x_idx+1 + (y_idx)*physics_grid.num_grid_nodes(1) + (z_idx)*physics_grid.num_grid_nodes(1)*physics_grid.num_grid_nodes(2);
+                    if(grid_flat_idx < 1 || grid_flat_idx > prod(physics_grid.num_grid_nodes))
+                        grid_idx
+                    end
                     physics_grid.rasterized_mass(grid_flat_idx) = physics_grid.rasterized_mass(grid_flat_idx) + ...
                         basis_functions.N{element_node_flat_idx}(q_reference)*mpm_points.mass(pt_num);
                 end

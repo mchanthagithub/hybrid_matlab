@@ -17,7 +17,7 @@ function [ physics_grid ] = computeForces( physics_grid,mpm_points,basis_functio
                 for x_idx = grid_idx(1):grid_idx(1)+1
                     element_node_flat_idx = (x_idx-grid_idx(1)+1) + (y_idx-grid_idx(2))*2 + (z_idx-grid_idx(3))*4;
                                         
-                    grid_flat_idx = x_idx + (y_idx-1)*physics_grid.num_grid_nodes(1) + (z_idx-1)*physics_grid.num_grid_nodes(1)*physics_grid.num_grid_nodes(2);
+                    grid_flat_idx = x_idx+1 + (y_idx)*physics_grid.num_grid_nodes(1) + (z_idx)*physics_grid.num_grid_nodes(1)*physics_grid.num_grid_nodes(2);
                     
                     basis_grad(1) = basis_functions.dN{element_node_flat_idx,1}(q_reference);
                     basis_grad(2) = basis_functions.dN{element_node_flat_idx,2}(q_reference);

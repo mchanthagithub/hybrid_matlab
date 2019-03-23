@@ -15,7 +15,7 @@ function [ physics_grid ] = rasterizeMomentumToGrid( physics_grid,mpm_points,bas
                 for x_idx = grid_idx(1):grid_idx(1)+1
                     element_node_flat_idx = (x_idx-grid_idx(1)+1) + (y_idx-grid_idx(2))*2 + (z_idx-grid_idx(3))*4;
                                         
-                    grid_flat_idx = x_idx + (y_idx-1)*physics_grid.num_grid_nodes(1) + (z_idx-1)*physics_grid.num_grid_nodes(1)*physics_grid.num_grid_nodes(2);
+                    grid_flat_idx = x_idx+1 + (y_idx)*physics_grid.num_grid_nodes(1) + (z_idx)*physics_grid.num_grid_nodes(1)*physics_grid.num_grid_nodes(2);
                     physics_grid.rasterized_momentum(grid_flat_idx,:) = physics_grid.rasterized_momentum(grid_flat_idx,:) + ...
                         basis_functions.N{element_node_flat_idx}(q_reference)*mpm_points.momentum(pt_num,:);
                 end

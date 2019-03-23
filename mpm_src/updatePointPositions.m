@@ -15,7 +15,7 @@ function [ mpm_points ] = updatePointPositions( physics_grid,mpm_points,basis_fu
                 for x_idx = grid_idx(1):grid_idx(1)+1
                     element_node_flat_idx = (x_idx-grid_idx(1)+1) + (y_idx-grid_idx(2))*2 + (z_idx-grid_idx(3))*4;
 
-                    grid_flat_idx = x_idx + (y_idx-1)*physics_grid.num_grid_nodes(1) + (z_idx-1)*physics_grid.num_grid_nodes(1)*physics_grid.num_grid_nodes(2);
+                    grid_flat_idx = x_idx+1 + (y_idx)*physics_grid.num_grid_nodes(1) + (z_idx)*physics_grid.num_grid_nodes(1)*physics_grid.num_grid_nodes(2);
                     
                     basis_weight = basis_functions.N{element_node_flat_idx}(q_reference);
 

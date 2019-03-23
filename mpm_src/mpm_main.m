@@ -4,8 +4,8 @@ clear
 close all
 
 %% Simulation parameters
-t_final = 2.0;
-del_t = 0.0005;
+t_final = 5;
+del_t = 0.0002;
 g = [0 0 -9.81];
 flip_weight = 1.0;
 
@@ -26,20 +26,20 @@ physics_grid.rasterized_acceleration = zeros(prod(physics_grid.num_grid_nodes),3
 
 %% Material properties
 rho = 1000;
-% Bulk modulus
-K = 70e7;
-% Poisson ratio
-nu = 0.3;
-% Shear modulus
-G = 3*K*(1-2*nu)/(2*(1+nu));
+% % Bulk modulus
+% K = 70e6;
+% % Poisson ratio
+% nu = 0.3;
+% % Shear modulus
+% G = 3*K*(1-2*nu)/(2*(1+nu));
 points_per_dim = 2;
 
-E = 3*K*(1-2*nu);
+% E = 3*K*(1-2*nu);
 material_properties.rho = 1000;
-material_properties.K = 70e6;
+material_properties.K = 60e6;
 material_properties.nu = 0.3;
-material_properties.G = 3*K*(1-2*nu)/(2*(1+nu));
-material_properties.E = 3*K*(1-2*nu);
+material_properties.G = 3*material_properties.K*(1-2*material_properties.nu)/(2*(1+material_properties.nu));
+material_properties.E = 3*material_properties.K*(1-2*material_properties.nu);
 material_properties.rho_critical = material_properties.rho;
 
 material_properties.mu_s = 0.3819;
@@ -47,12 +47,12 @@ material_properties.mu_2 = 0.6435;
 material_properties.xi = 1.1233;
 
 
-cfl_t = physics_grid.delta * sqrt(rho/E)
+cfl_t = physics_grid.delta * sqrt(rho/material_properties.E)
 del_t
 
 %% Make bodies
-body(1).min = [2 2 1];
-body(1).max = [3 3 2];
+body(1).min = [2 2 2];
+body(1).max = [3 3 3];
 
 % body(2).min = [2 5 1];
 % body(2).max = [3 6 2];
@@ -112,7 +112,7 @@ static_planes(1).type = 1;
 q_save(1,:,:) = mpm_points.q;
 v_save(1,:,:) = mpm_points.vel;
 ctr = 0;
-save_per_sec = 50;
+save_per_sec = 500;
 num_steps = floor(1.0/del_t);
 save_freq = num_steps/save_per_sec;
 save_ctr = 1;
@@ -127,22 +127,26 @@ for t = del_t:del_t:t_final
     physics_grid.rasterized_momentum_post_force(:) = 0;
     physics_grid.rasterized_forces(:) = 0;
     physics_grid.rasterized_velocity(:) = 0;
-    physics_grid.rasterized_acceleration(:) = 0;
+    physics_grid.rasterized_acceleration(:) = 0;    
+    
     % Grid: Project mass to grid
     physics_grid = rasterizeMassToGrid(physics_grid,mpm_points,basis_functions);
     % Grid: Project momentum to grid
     physics_grid = rasterizeMomentumToGrid(physics_grid,mpm_points,basis_functions);
+    
     % Points: Update point volume
     for pt_num = 1:mpm_points.num_points
         mpm_points.volume(pt_num) = mpm_points.volume(pt_num).*exp(del_t*trace(squeeze(mpm_points.vel_grad(pt_num,:,:))));
     end
+%     physics_grid.rasterized_momentum(physics_grid.rasterized_momentum<0)
     % Points: Update stress
 %     mpm_points = computeHypoelasticCauchyStressMuOfI(mpm_points,material_properties,del_t);
     mpm_points = computeHypoelasticCauchyStressLinearElastic(mpm_points,material_properties,del_t);
     % Grid: Project forces to grid
     physics_grid = computeForces(physics_grid,mpm_points,basis_functions,g);
     % Grid: Update grid momentum
-    physics_grid.rasterized_momentum_post_force = physics_grid.rasterized_momentum_post_force + del_t * physics_grid.rasterized_forces;
+    physics_grid.rasterized_momentum_post_force = physics_grid.rasterized_momentum + del_t * physics_grid.rasterized_forces;
+%     physics_grid.rasterized_momentum_post_force(physics_grid.rasterized_momentum_post_force<0)
     % Grid: Resolve collisions with planes
     physics_grid = resolvePlaneCollisions(physics_grid,static_planes);
     
@@ -161,11 +165,18 @@ for t = del_t:del_t:t_final
     
     % Points: Update positions
     mpm_points = updatePointPositions( physics_grid,mpm_points,basis_functions, del_t);
-
+    
     % Points: Resolve plane collisions
     mpm_points = resolvePlanePointCollisions(mpm_points,static_planes);
     
     ctr = ctr+1;
+%     if(ctr == 1)
+%        mpm_points_new(ctr) = mpm_points;
+%     elseif(ctr == 2)
+%         mpm_points_new(ctr) = mpm_points;
+%         return
+%     end
+%     
     if(mod(ctr,save_freq) == 0)
         t
         save_ctr = save_ctr+1;

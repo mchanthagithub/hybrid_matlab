@@ -4,7 +4,7 @@ tol = 1e-14;
 [dummy,num_static_planes] = size(static_planes);
 total_node_num = prod(physics_grid.num_grid_nodes);
 node_vels = physics_grid.rasterized_momentum_post_force./physics_grid.rasterized_mass;
-8888888888888888
+% 8888888888888888
 for node_num = 1:total_node_num
     if physics_grid.rasterized_mass(node_num) < tol
         continue
@@ -14,7 +14,7 @@ for node_num = 1:total_node_num
     node_idx = [mod(node_num_adjusted,physics_grid.num_grid_nodes(1)) ...
         mod(floor(node_num_adjusted/physics_grid.num_grid_nodes(1)), physics_grid.num_grid_nodes(2))...
         floor(node_num_adjusted/(physics_grid.num_grid_nodes(1)*physics_grid.num_grid_nodes(2)))];
-    node_idx
+%     node_idx
     
     node_coord = node_idx * physics_grid.delta + physics_grid.min;
     for plane_num = 1:num_static_planes
