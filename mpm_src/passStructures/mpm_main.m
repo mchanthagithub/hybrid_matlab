@@ -131,31 +131,24 @@ for t = del_t:del_t:t_final
     physics_grid.rasterized_acceleration(:) = 0;    
     
     % Grid: Project mass to grid
-    physics_grid.rasterized_mass = rasterizeMassToGrid( physics_grid.min, physics_grid.delta, ...
-        physics_grid.num_grid_nodes, mpm_points.q,mpm_points.mass,mpm_points.num_points,basis_functions );
-    
+    physics_grid = rasterizeMassToGrid(physics_grid,mpm_points,basis_functions);
     % Grid: Project momentum to grid
-    physics_grid.rasterized_momentum = rasterizeMomentumToGrid( physics_grid.min, physics_grid.delta, ...
-        physics_grid.num_grid_nodes, mpm_points.q,mpm_points.momentum,mpm_points.num_points,basis_functions );
+    physics_grid = rasterizeMomentumToGrid(physics_grid,mpm_points,basis_functions);
     
     % Points: Update point volume
     for pt_num = 1:mpm_points.num_points
         mpm_points.volume(pt_num) = mpm_points.volume(pt_num).*exp(del_t*trace(squeeze(mpm_points.vel_grad(pt_num,:,:))));
     end
-    
+%     physics_grid.rasterized_momentum(physics_grid.rasterized_momentum<0)
     % Points: Update stress
 %     mpm_points = computeHypoelasticCauchyStressMuOfI(mpm_points,material_properties,del_t);
     mpm_points = computeHypoelasticCauchyStressLinearElastic(mpm_points,material_properties,del_t);
-    
     % Grid: Project forces to grid
-    physics_grid.rasterized_forces = computeForces( physics_grid.min, physics_grid.delta, physics_grid.num_grid_nodes, ...
-        physics_grid.rasterized_mass, mpm_points.q,mpm_points.sigma,mpm_points.volume,mpm_points.num_points,basis_functions,g );
-    
+    physics_grid = computeForces(physics_grid,mpm_points,basis_functions,g);
     % Grid: Update grid momentum
     physics_grid.rasterized_momentum_post_force = physics_grid.rasterized_momentum + del_t * physics_grid.rasterized_forces;
 %     physics_grid.rasterized_momentum_post_force(physics_grid.rasterized_momentum_post_force<0)
-    
-% Grid: Resolve collisions with planes
+    % Grid: Resolve collisions with planes
     physics_grid = resolvePlaneCollisions(physics_grid,static_planes);
     
     % Grid: Update grid velocity
@@ -166,18 +159,13 @@ for t = del_t:del_t:t_final
     physics_grid.rasterized_acceleration(isnan(physics_grid.rasterized_acceleration)) = 0;
     
     % Points: Update velocity gradient
-    mpm_points.vel_grad = computeVelocityGradient( physics_grid.min, physics_grid.delta,...
-        physics_grid.num_grid_nodes, physics_grid.rasterized_velocity,mpm_points.q,mpm_points.num_points,basis_functions );
+    mpm_points = computeVelocityGradient( physics_grid,mpm_points,basis_functions );
     
     % Points: Update velocities
-    [mpm_points.vel,mpm_points.momentum] = updatePointVelocities( physics_grid.min, physics_grid.delta,...
-        physics_grid.num_grid_nodes, physics_grid.rasterized_velocity,physics_grid.rasterized_acceleration, ...
-        mpm_points.q,mpm_points.vel,mpm_points.mass,mpm_points.num_points,basis_functions, del_t, flip_weight);
+    mpm_points = updatePointVelocities( physics_grid,mpm_points,basis_functions, del_t, flip_weight);
     
     % Points: Update positions
-    mpm_points.q = updatePointPositions( physics_grid.min, physics_grid.delta,...
-        physics_grid.num_grid_nodes, physics_grid.rasterized_velocity, ...
-        mpm_points.q,mpm_points.num_points,basis_functions, del_t);
+    mpm_points = updatePointPositions( physics_grid,mpm_points,basis_functions, del_t);
     
     % Points: Resolve plane collisions
     mpm_points = resolvePlanePointCollisions(mpm_points,static_planes);
