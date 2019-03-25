@@ -3,9 +3,6 @@ clc
 clear
 close all
 
-inputDEMStateFromFile('results/dem_config_001.vtu','empty.txt')
-return
-
 %% Simulation parameters
 t_final = 10.0;
 del_t = 0.001;
@@ -40,21 +37,17 @@ rest_coeff = exp(-gamma_n*t_col/2)
 % q is (n_DEM)x(3) in size
 rngseed = 123;
 % [q,r] = generateInitialPointPositionsAndRadii(n_dem,r_mean,r_sigma,L,domain_min,domain_max,rngseed);
-[q,r] = generateInitialPointPositionsAndRadiiVoxel( n_dem,r_mean,r_sigma,domain_min,domain_max,rngseed );
+% [q,r] = generateInitialPointPositionsAndRadiiVoxel( n_dem,r_mean,r_sigma,domain_min,domain_max,rngseed );
+% [n_dem,dummy] = size(q);
+% n_dem
+% % Initialize random velocities
+% v = rand(n_dem,3);
+% [contact_sphere_sphere_old, contact_sphere_plane_old] = intializeContacts();
+
+[q,r,v,contact_sphere_sphere_old,contact_sphere_plane_old] = inputDEMStateFromFile('results/old/dem_config_070.vtu','results/old/dem_contacts_070.txt');
 [n_dem,dummy] = size(q);
 n_dem
-% Initialize random velocities
-v = rand(n_dem,3);
-% v = zeros(n_dem,3);
-% v(:,3) = zeros(n_dem,1);
-% q(1,:) = [0 0 5.501];
-% q(2,:) = [1 0 4.501];
-% q(1,:) = [0 0 5.5];
-% q(2,:) = [2 0 5.5];
-% r(1) = 0.5;
-% r(2) = 0.5;
-% v(1,:) = [1 0 0];
-% v(2,:) = [-1 0 0];
+
 mass = (4/3)*pi*(r.^3)*rho.*ones(1,n_dem);
 
 %% Set any static planes (Only have axis-aligned planes)
@@ -94,9 +87,11 @@ for ii = 1:(num_digits - numel(num2str(save_ctr)))
 end
 temp_string = strcat('results/dem_config_',zero_string);
 temp_string2 = strcat(temp_string,num2str(save_ctr));
-outputDEMVTK(strcat(temp_string2,'.vtu'),n_dem,squeeze(q_save(save_ctr,:,:)),squeeze(v_save(save_ctr,:,:)));
+outputDEMVTK(strcat(temp_string2,'.vtu'),n_dem,squeeze(q_save(save_ctr,:,:)),r,squeeze(v_save(save_ctr,:,:)));
+temp_string_contacts = strcat('results/dem_contacts_',zero_string);
+temp_string_contacts2 = strcat(temp_string_contacts,num2str(save_ctr));
+outputDEMContacts(strcat(temp_string_contacts2,'.txt'),contact_sphere_sphere_old,contact_sphere_plane_old);
 
-[contact_sphere_sphere_old, contact_sphere_plane_old] = intializeContacts();
 
 %% Begin time-integration
 for t = del_t:del_t:t_final
@@ -125,7 +120,7 @@ for t = del_t:del_t:t_final
                 contact_sphere_sphere.v_rel(contact_sphere_sphere.num,:) = v_rel;
                 contact_exists = 0;
                 if(contact_sphere_sphere_old.num > 0)
-                    [contact_exists, index] = ismember([kk jj],contact_sphere_sphere_old.idx,'row');
+                    [contact_exists, index] = ismember([kk jj],contact_sphere_sphere_old.idx,'rows');
                 end
                 if(contact_exists)
                     delta_s = contact_sphere_sphere_old.delta_s(index,:);
@@ -163,7 +158,7 @@ for t = del_t:del_t:t_final
 %                 contact_v_rel_sphere_plane(contact_num_sphere_plane,:)
                 contact_exists = 0;
                 if(contact_sphere_plane_old.num > 0)
-                    [contact_exists, index] = ismember([kk jj],contact_sphere_plane_old.idx,'row');
+                    [contact_exists, index] = ismember([kk jj],contact_sphere_plane_old.idx,'rows');
                 end
                 if(contact_exists)
 %                     index
@@ -280,7 +275,10 @@ for t = del_t:del_t:t_final
         end
         temp_string = strcat('results/dem_config_',zero_string);
         temp_string2 = strcat(temp_string,num2str(save_ctr));
-        outputDEMVTK(strcat(temp_string2,'.vtu'),n_dem,squeeze(q_save(save_ctr,:,:)),squeeze(v_save(save_ctr,:,:)));
+        outputDEMVTK(strcat(temp_string2,'.vtu'),n_dem,squeeze(q_save(save_ctr,:,:)),r,squeeze(v_save(save_ctr,:,:)));
+        temp_string_contacts = strcat('results/dem_contacts_',zero_string);
+        temp_string_contacts2 = strcat(temp_string_contacts,num2str(save_ctr));
+        outputDEMContacts(strcat(temp_string_contacts2,'.txt'),contact_sphere_sphere,contact_sphere_plane);
     end
 end
 
