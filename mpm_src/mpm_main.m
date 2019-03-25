@@ -11,18 +11,7 @@ flip_weight = 1.0;
 
 %% Grid parameters
 L = 5;
-physics_grid.min = [0,0,0];
-physics_grid.max = [L,L,L];
-physics_grid.delta = L/10;
-physics_grid.num_grid_nodes = ceil((physics_grid.max - physics_grid.min)./physics_grid.delta);
-physics_grid.num_grid_elements = physics_grid.num_grid_nodes-1;
-physics_grid.points_per_dim = 2;
-physics_grid.rasterized_mass = zeros(prod(physics_grid.num_grid_nodes),1);
-physics_grid.rasterized_momentum = zeros(prod(physics_grid.num_grid_nodes),3);
-physics_grid.rasterized_momentum_post_force = zeros(prod(physics_grid.num_grid_nodes),3);
-physics_grid.rasterized_forces = zeros(prod(physics_grid.num_grid_nodes),3);
-physics_grid.rasterized_velocity = zeros(prod(physics_grid.num_grid_nodes),3);
-physics_grid.rasterized_acceleration = zeros(prod(physics_grid.num_grid_nodes),3);
+physics_grid = initializePhysicsGrid(L);
 
 %% Material properties
 rho = 1000;
@@ -46,7 +35,6 @@ material_properties.mu_s = 0.3819;
 material_properties.mu_2 = 0.6435;
 material_properties.xi = 1.1233;
 
-
 cfl_t = physics_grid.delta * sqrt(rho/material_properties.E)
 del_t
 
@@ -58,19 +46,10 @@ body(1).max = [3 3 3];
 % body(2).max = [3 6 2];
 
 %% Generate Points
-[ q ] = generateInitialPointPositions( body, physics_grid );
-mpm_points.q = q;
-[num_points,dummy] = size(q);
-mpm_points.num_points = num_points;
-mpm_points.momentum = zeros(size(q));
-mpm_points.vel = zeros(size(q));
-mpm_points.rho = material_properties.rho*ones(num_points,1);
-mpm_points.volume = (physics_grid.delta^3)/(physics_grid.points_per_dim^3) * ones(num_points,1);
-mpm_points.mass = mpm_points.rho .* mpm_points.volume;
-mpm_points.sigma = zeros(num_points,3,3);
-mpm_points.vel_grad = zeros(num_points,3,3);
-mpm_points.gamma_bar_dot_p = zeros(num_points,1);
-scatter3(q(:,1),q(:,2),q(:,3))
+% [ q ] = generateInitialPointPositions( body, physics_grid );
+mpm_points = initializeMPMPoints(body,physics_grid,material_properties);
+
+scatter3(mpm_points.q(:,1),mpm_points.q(:,2),mpm_points.q(:,3))
 axis equal
 xlabel('x')
 ylabel('y')
@@ -123,12 +102,7 @@ num_saves_total = ceil(save_per_sec * t_final);
 
 for t = del_t:del_t:t_final
     % Clear physics grid
-    physics_grid.rasterized_mass(:) = 0;
-    physics_grid.rasterized_momentum(:) = 0;
-    physics_grid.rasterized_momentum_post_force(:) = 0;
-    physics_grid.rasterized_forces(:) = 0;
-    physics_grid.rasterized_velocity(:) = 0;
-    physics_grid.rasterized_acceleration(:) = 0;    
+    physics_grid = clearPhysicsGrid(physics_grid);
     
     % Grid: Project mass to grid
     physics_grid.rasterized_mass = rasterizeMassToGrid( physics_grid.min, physics_grid.delta, ...
