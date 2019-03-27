@@ -15,9 +15,9 @@ classdef mpm_state
     end
     
     methods
-        function obj = mpm_state(L_grid,bodies,static_planes,rho,K,nu,mu_s,mu_2,xi)
+        function obj = mpm_state(grid_min,grid_max,delta_h,bodies,static_planes,rho,K,nu,mu_s,mu_2,xi)
             obj.material_properties = initializeMaterialProperties(rho,K,nu,mu_s,mu_2,xi);
-            obj.physics_grid = initializePhysicsGrid(L_grid);
+            obj.physics_grid = initializePhysicsGrid(grid_min,grid_max,delta_h);
             obj.mpm_points = initializeMPMPoints(bodies,obj.physics_grid,obj.material_properties);
             obj.static_planes = static_planes;
             obj.basis_functions = createBasisFunctions();
@@ -80,6 +80,23 @@ classdef mpm_state
 
             % Points: Resolve plane collisions
             obj.mpm_points = resolvePlanePointCollisions(obj.mpm_points,obj.static_planes);
+        end
+        
+        % Grabs mpm points based on idx
+        function obj_out = mpm_state_splice(obj,mpm_forward_index_map)
+            obj_out = obj;
+            obj_out.mpm_points.q = obj.mpm_points.q(mpm_forward_index_map,:);
+            [obj_out.mpm_points.num_points,~] = size(obj.mpm_points.q(mpm_forward_index_map,:));
+            obj_out.mpm_points.momentum = obj.mpm_points.momentum(mpm_forward_index_map,:);
+            obj_out.mpm_points.vel = obj.mpm_points.vel(mpm_forward_index_map,:);
+            obj_out.mpm_points.rho = obj.mpm_points.rho(mpm_forward_index_map);
+            obj_out.mpm_points.volume = obj.mpm_points.volume(mpm_forward_index_map);
+            obj_out.mpm_points.mass = obj.mpm_points.mass(mpm_forward_index_map);
+            obj_out.mpm_points.sigma = obj.mpm_points.sigma(mpm_forward_index_map,:,:);
+            obj_out.mpm_points.vel_grad = obj.mpm_points.vel_grad(mpm_forward_index_map,:,:);
+            obj_out.mpm_points.gamma_bar_dot_p = obj.mpm_points.gamma_bar_dot_p(mpm_forward_index_map,:);
+            
+            
         end
     end
 end

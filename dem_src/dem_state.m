@@ -44,6 +44,7 @@ classdef dem_state
                 obj.contact_sphere_plane_old = contact_sphere_plane_old_read;
                 obj.static_planes = static_planes_read;
                 obj.mass = (4/3)*pi*(obj.r.^3)*obj.rho.*ones(obj.n_dem,1);
+                obj.F = zeros(obj.n_dem,3);
             else
                 rngseed = 123;
                 rng(rngseed);
@@ -119,6 +120,50 @@ classdef dem_state
             % Calculate new positions
             obj.q = obj.q + obj.del_t*obj.v;
         end
+        
+        % Grabs dem grains based on idx
+        function obj_out = dem_state_splice(obj,dem_forward_index_map,dem_reverse_index_map)
+            obj_out = obj;
+            obj_out.q = obj.q(dem_forward_index_map,:);
+            [obj_out.n_dem,~] = size(obj.q(dem_forward_index_map,:));
+            obj_out.r = obj.r(dem_forward_index_map);
+            obj_out.v = obj.v(dem_forward_index_map,:);
+            obj_out.F = obj.F(dem_forward_index_map,:);
+            obj_out.mass = obj.mass(dem_forward_index_map);
+            
+            new_contact_ctr = 0;
+            % Adjust indices of cached sphere sphere collisions
+            for ii = 1:obj.contact_sphere_sphere_old.num
+                idx1 = obj.contact_sphere_sphere_old.idx(ii,1);
+                idx2 = obj.contact_sphere_sphere_old.idx(ii,2);
+                new_idx1 = dem_reverse_index_map(idx1);
+                new_idx2 = dem_reverse_index_map(idx2);
+                if(new_idx1 == 0 || new_idx2 == 0)
+                   continue; 
+                end
+                new_contact_ctr = new_contact_ctr + 1;
+                obj_out.contact_sphere_sphere_old.idx(new_contact_ctr,:) = [new_idx1 new_idx2];
+            end
+            obj_out.contact_sphere_sphere_old.idx = obj_out.contact_sphere_sphere_old.idx(1:new_contact_ctr,:);
+            obj_out.contact_sphere_sphere_old.num = new_contact_ctr;
+            
+            new_contact_ctr = 0;
+            % Adjust indices of cached sphere plane collisions
+            for ii = 1:obj.contact_sphere_plane_old.num
+                idx1 = obj.contact_sphere_plane_old.idx(ii,1);
+                idx2 = obj.contact_sphere_plane_old.idx(ii,2);
+                new_idx1 = dem_reverse_index_map(idx1);
+                %idx2 is for the plane so don't adjust that
+                if(new_idx1 == 0)
+                   continue; 
+                end
+                new_contact_ctr = new_contact_ctr + 1;
+                obj_out.contact_sphere_plane_old.idx(new_contact_ctr,:) = [new_idx1 idx2];
+            end
+            obj_out.contact_sphere_plane_old.idx = obj_out.contact_sphere_plane_old.idx(1:new_contact_ctr,:);
+            obj_out.contact_sphere_plane_old.num = new_contact_ctr;
+        end
+        
     end
 end
 

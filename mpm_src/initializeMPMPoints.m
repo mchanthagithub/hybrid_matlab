@@ -11,6 +11,6 @@ mpm_points.mass = mpm_points.rho .* mpm_points.volume;
 mpm_points.sigma = zeros(num_points,3,3);
 mpm_points.vel_grad = zeros(num_points,3,3);
 mpm_points.gamma_bar_dot_p = zeros(num_points,1);
-scatter3(q(:,1),q(:,2),q(:,3))
+% scatter3(q(:,1),q(:,2),q(:,3))
 end
 

@@ -1,4 +1,11 @@
-function [ output_args ] = outputMPMVTK( file_string,n_dem,q,v,sigma_voigt,gamma_bar_dot_p )
+function [ output_args ] = outputMPMVTK( file_string,n_dem,q,v,sigma,gamma_bar_dot_p )
+sigma_voigt(:,1) = sigma(:,1,1);
+sigma_voigt(:,2) = sigma(:,2,2);
+sigma_voigt(:,3) = sigma(:,3,3);
+sigma_voigt(:,4) = sigma(:,2,3);
+sigma_voigt(:,5) = sigma(:,3,1);
+sigma_voigt(:,6) = sigma(:,1,2);
+
 fp = fopen(file_string,'w');
 
     fprintf(fp,'<?xml version="1.0"?>\n');

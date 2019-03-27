@@ -6,10 +6,10 @@ close all
 %% Simulation parameters
 g = [0 0 -9.81];
 
-n_dem = 3000;
+n_dem = 2700;
 L = 10;
 domain_min = [0,0,0]; %x,y,z
-domain_max = [L,L,L]; %x,y,z
+domain_max = [6,6,50]; %x,y,z
 r_mean = 0.5;
 r_sigma = 0.5*(0.15/3);
 rho = 1000;
@@ -21,21 +21,27 @@ mu = 0.5;
 static_planes(1).q = [0 0 0];
 static_planes(1).n = [0 0 1];
 
-static_planes(2).q = [10 0 0];
+static_planes(2).q = [6 0 0];
 static_planes(2).n = [-1 0 0];
 
 static_planes(3).q = [0 0 0];
 static_planes(3).n = [1 0 0];
 
-static_planes(4).q = [0 10 0];
+static_planes(4).q = [0 6 0];
 static_planes(4).n = [0 -1 0];
 
 static_planes(5).q = [0 0 0];
 static_planes(5).n = [0 1 0];
 [dummy,static_planes.num] = size(static_planes);
-dem_state = dem_state(1,'results/old/dem_config_035.vtu','results/old/dem_contact_035.txt',n_dem,domain_min,domain_max,r_mean,r_sigma,...
+dem_state = dem_state(0,'results/old/dem_config_035.vtu','results/old/dem_contact_035.txt',n_dem,domain_min,domain_max,r_mean,r_sigma,...
     k_n,k_t,gamma_n,gamma_t,rho,mu,static_planes);
 material_parameters = [dem_state.k_n dem_state.k_t dem_state.gamma_n dem_state.gamma_t dem_state.rho dem_state.mu];
+m_mean = mean(dem_state.mass);
+t_col = pi*(2*k_n/m_mean - (dem_state.gamma_n^2)/4)^(-1/2)
+t_col_20 = t_col/20
+dem_state.del_t
+rest_coeff = exp(-dem_state.gamma_n*t_col/2)
+
 
 q_save(1,:,:) = dem_state.q;
 v_save(1,:,:) = dem_state.v;
@@ -55,9 +61,7 @@ for t = dem_state.del_t:dem_state.del_t:dem_state.t_final
     dem_state = dem_state.flow();
     ctr = ctr+1;
     if(mod(ctr,save_freq) == 0)
-        t
-        dem_state.contact_sphere_sphere.num
-        dem_state.contact_sphere_plane.num
+        fprintf('Current t: %g S-S contacts: %d S-P contacts: %d\n',t, dem_state.contact_sphere_sphere.num,dem_state.contact_sphere_plane.num)
         save_ctr = save_ctr+1;
         q_save(save_ctr,:,:) = dem_state.q;
         v_save(save_ctr,:,:) = dem_state.v;

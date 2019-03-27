@@ -15,7 +15,10 @@ xi = 1.1233;
 static_planes(1).q = [0 0 0];
 static_planes(1).n = [0 0 1];
 static_planes(1).type = 1;
-mpm_state = mpm_state(L_grid,bodies,static_planes,rho,K,nu,mu_s,mu_2,xi);
+grid_min = [0 0 0];
+grid_max = [10 10 6];
+delta_h = 0.5;
+mpm_state = mpm_state(grid_min,grid_max,delta_h,bodies,static_planes,rho,K,nu,mu_s,mu_2,xi);
 
 tic
 %% Time integration

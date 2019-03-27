@@ -1,8 +1,8 @@
-function [physics_grid] = initializePhysicsGrid(L)
-physics_grid.min = [0,0,0];
-physics_grid.max = [L,L,L];
-physics_grid.delta = L/10;
-physics_grid.num_grid_nodes = ceil((physics_grid.max - physics_grid.min)./physics_grid.delta);
+function [physics_grid] = initializePhysicsGrid(grid_min,grid_max,delta_h)
+physics_grid.min = grid_min;
+physics_grid.max = grid_max;
+physics_grid.delta = delta_h;
+physics_grid.num_grid_nodes = floor((physics_grid.max - physics_grid.min)./physics_grid.delta)+1;
 physics_grid.num_grid_elements = physics_grid.num_grid_nodes-1;
 physics_grid.points_per_dim = 2;
 physics_grid.rasterized_mass = zeros(prod(physics_grid.num_grid_nodes),1);

@@ -19,6 +19,13 @@ function [ rasterized_mass ] = rasterizeMassToGrid( physics_grid_min, physics_gr
                                         
                     grid_flat_idx = x_idx+1 + (y_idx)*physics_grid_num_grid_nodes(1) + (z_idx)*physics_grid_num_grid_nodes(1)*physics_grid_num_grid_nodes(2);
                     if(grid_flat_idx < 1 || grid_flat_idx > prod(physics_grid_num_grid_nodes))
+                        mpm_points_q(pt_num,:)
+                        physics_grid_min
+                        physics_grid_delta
+                        x_idx
+                        y_idx
+                        z_idx
+                        grid_flat_idx
                         grid_idx
                     end
                     rasterized_mass(grid_flat_idx) = rasterized_mass(grid_flat_idx) + ...
