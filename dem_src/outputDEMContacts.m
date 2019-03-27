@@ -1,4 +1,4 @@
-function [] = outputDEMContacts(filename,contact_sphere_sphere,contact_sphere_plane)
+function [] = outputDEMContacts(filename,contact_sphere_sphere,contact_sphere_plane,static_planes)
 
 fp = fopen(filename,'w');
 
@@ -67,6 +67,21 @@ fprintf(fp,'contact_sphere_plane, delta_s\n');
 for ii = 1:contact_sphere_plane.num
    fprintf(fp,'%.16g,%.16g,%.16g\n',contact_sphere_plane.delta_s(ii,1),contact_sphere_plane.delta_s(ii,2),contact_sphere_plane.delta_s(ii,3)); 
 end
+
+[~,num_planes] = size(static_planes);
+fprintf(fp,'static_planes, num\n');
+fprintf(fp,'%d\n',num_planes);
+
+fprintf(fp,'static_planes, q\n');
+for ii = 1:num_planes
+   fprintf(fp,'%.16g,%.16g,%.16g\n',static_planes(ii).q); 
+end
+
+fprintf(fp,'static_planes, normal\n');
+for ii = 1:num_planes
+   fprintf(fp,'%.16g,%.16g,%.16g\n',static_planes(ii).n); 
+end
+
 
 fclose(fp);
 

@@ -1,4 +1,4 @@
-function [ output_args ] = outputDEMVTK( file_string,n_dem,q,r,v )
+function [ output_args ] = outputDEMVTK( file_string,n_dem,q,r,v,material_parameters )
 fp = fopen(file_string,'w');
 
     fprintf(fp,'<?xml version="1.0"?>\n');
@@ -55,6 +55,12 @@ fp = fopen(file_string,'w');
     fprintf(fp,'   </Cells>\n');
     fprintf(fp,'  </Piece>\n');
     fprintf(fp,' </UnstructuredGrid>\n');
+    fprintf(fp,' <Field>\n');
+    fprintf(fp,' <!--k_n(normal spring coeff) k_t gamma_n(normal viscous damp) gamma_t rho(density) mu(friction coefficient)-->\n');
+    fprintf(fp,'  <DataArray type="Float32" Name="Material_parameters" NumberOfComponents="6" format="ascii">\n');
+    fprintf(fp,'  %.16g %.16g %.16g %.16g %.16g %.16g\n',material_parameters);
+    fprintf(fp,'  </DataArray>\n');
+    fprintf(fp,' </Field>\n');
     fprintf(fp,'</VTKFile>\n');
 
 

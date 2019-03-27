@@ -1,4 +1,4 @@
-function [q,r,v,contact_sphere_sphere,contact_sphere_plane] = inputDEMStateFromFile(state_filename,contact_filename)
+function [q,r,v,material_parameters,contact_sphere_sphere,contact_sphere_plane,static_planes] = inputDEMStateFromFile(state_filename,contact_filename)
 fprintf('Reading from %s and %s',state_filename,contact_filename);
 state_fp = fopen(state_filename);
 tline = fgetl(state_fp);
@@ -6,6 +6,7 @@ num_points = 0;
 q_read_flag = 0;
 v_read_flag = 0;
 r_read_flag = 0;
+material_param_read_flag = 0;
 ctr = 0;
 while ischar(tline)
 %     disp(tline)
@@ -50,6 +51,20 @@ while ischar(tline)
         end
     end
     
+    if(material_param_read_flag == 1)
+        ctr = ctr+1;
+        tline = regexprep(tline,' +',' ');
+        tline = strtrim(tline);
+        tline = split(tline,' ');
+        material_parameters(1) = str2num(tline{1});
+        material_parameters(2) = str2num(tline{2});
+        material_parameters(3) = str2num(tline{3});
+        material_parameters(4) = str2num(tline{4});
+        material_parameters(5) = str2num(tline{5});
+        material_parameters(6) = str2num(tline{6});
+        material_param_read_flag = 0;
+    end
+    
     if(contains(tline,'NumberOfPoints'))
         tline = split(tline,'"');
         num_points = str2num(tline{2});
@@ -70,9 +85,13 @@ while ischar(tline)
         r_read_flag = 1;
     end
     
+    if(contains(tline,'Material_parameters'))
+        material_param_read_flag = 1;
+    end
+    
     tline = fgetl(state_fp);
 end
-fclose(state_fp)
+fclose(state_fp);
 
 
 contact_fp = fopen(contact_filename);
@@ -87,6 +106,9 @@ v_rel_read_flag = 0;
 delta_s_read_flag = 0;
 sphere_sphere_flag = 0;
 sphere_plane_flag = 0;
+static_plane_flag = 0;
+static_plane_q_flag = 0;
+static_plane_n_flag = 0;
 ctr = 0;
 num = 0;
 while ischar(tline)
@@ -193,6 +215,33 @@ while ischar(tline)
         end
     end
     
+    if(static_plane_q_flag == 1)
+        ctr = ctr+1;
+        tline = split(tline,',');
+        if(static_plane_flag == 1)
+           temp_q = [str2num(tline{1}) str2num(tline{2}) str2num(tline{3})];
+           static_planes(ctr).q = temp_q;
+        end
+        if(ctr == num)
+            static_plane_q_flag = 0;
+            ctr = 0;
+        end
+    end
+    
+    
+    if(static_plane_n_flag == 1)
+        ctr = ctr+1;
+        tline = split(tline,',');
+        if(static_plane_flag == 1)
+           temp_n = [str2num(tline{1}) str2num(tline{2}) str2num(tline{3})];
+           static_planes(ctr).n = temp_n;
+        end
+        if(ctr == num)
+            static_plane_n_flag = 0;
+            ctr = 0;
+        end
+    end
+    
     if(contains(tline,'num'))
         tline_old = tline;
         tline_old = split(tline_old,' ,');
@@ -223,6 +272,16 @@ while ischar(tline)
             if(num == 0)
                 sphere_plane_flag = 0;
             end
+        elseif(contains(tline_old{1},'static_planes'))
+            sphere_plane_flag = 0;
+            sphere_sphere_flag = 0;
+            static_plane_flag = 1;
+            static_planes.num = num;
+            static_planes.q = zeros(num,3);
+            static_planes.n = zeros(num,3);
+            if(num == 0)
+                static_plane_flag = 0;
+            end
         end
     end
     
@@ -251,6 +310,14 @@ while ischar(tline)
         delta_s_read_flag = 1;
     end
     
+    if(static_plane_flag && sum(contains(tline,'q')))
+        static_plane_q_flag = 1;
+    end
+    
+    if(static_plane_flag && sum(contains(tline,'normal')))
+        static_plane_n_flag = 1;
+    end
+    
     tline = fgetl(contact_fp);
 end
-fclose(contact_fp)
+fclose(contact_fp);

@@ -11,6 +11,7 @@ classdef dem_state
         contact_sphere_sphere_old; % sphere-sphere contact cache
         contact_sphere_plane_old; % sphere-plane contact cache
         static_planes;
+        n_dem;
         k_n; % normal spring stiffness coeff
         k_t; % tangential spring stifness coeff
         gamma_n; % normal damping coeff
@@ -18,77 +19,105 @@ classdef dem_state
         rho; % density 
         mu; % friction coefficient
         F; % Forces
-        t_final = 0.4;
-        del_t = 0.0002;
+        mass;
+        t_final = 10.0;
+        del_t = 0.001;
         g = [0 0 -9.81];
     end
     
     methods
-        function obj = dem_state(L_grid,bodies,static_planes,rho,K,nu,mu_s,mu_2,xi)
-            obj.material_properties = initializeMaterialProperties(rho,K,nu,mu_s,mu_2,xi);
-            obj.physics_grid = initializePhysicsGrid(L_grid);
-            obj.mpm_points = initializeMPMPoints(bodies,obj.physics_grid,obj.material_properties);
-            obj.static_planes = static_planes;
-            obj.basis_functions = createBasisFunctions();
+        function obj = dem_state(restart,state_filename,contact_filename,n_dem_in,domain_min,domain_max,r_mean,r_sigma,k_n,k_t,gamma_n,gamma_t,rho,mu,static_planes)
+            if(restart)
+                [q_read,r_read,v_read,material_parameters,contact_sphere_sphere_old_read, ...
+                contact_sphere_plane_old_read,static_planes_read] = inputDEMStateFromFile(state_filename,contact_filename);
+                [obj.n_dem,~] = size(q_read);
+                obj.q = q_read;
+                obj.r = r_read;
+                obj.v = v_read;
+                obj.k_n = material_parameters(1);
+                obj.k_t = material_parameters(2);
+                obj.gamma_n = material_parameters(3);
+                obj.gamma_t = material_parameters(4);
+                obj.rho = material_parameters(5);
+                obj.mu = material_parameters(6);
+                obj.contact_sphere_sphere_old = contact_sphere_sphere_old_read;
+                obj.contact_sphere_plane_old = contact_sphere_plane_old_read;
+                obj.static_planes = static_planes_read;
+                obj.mass = (4/3)*pi*(obj.r.^3)*obj.rho.*ones(obj.n_dem,1);
+            else
+                rngseed = 123;
+                rng(rngseed);
+                obj.k_n = k_n; obj.k_t = k_t; obj.gamma_n = gamma_n; obj.gamma_t = gamma_t; 
+                obj.rho = rho; obj.mu = mu;
+                [obj.q,obj.r] = generateInitialPointPositionsAndRadiiVoxel( n_dem_in,r_mean,r_sigma,domain_min,domain_max,rngseed );
+                [obj.n_dem,~] = size(obj.q);
+                % Initialize random velocities
+                obj.v = rand(obj.n_dem,3);
+                obj.F = zeros(obj.n_dem,3);
+                [obj.contact_sphere_sphere_old, obj.contact_sphere_plane_old] = intializeContacts();
+                [obj.contact_sphere_sphere, obj.contact_sphere_plane] = intializeContacts();
+                obj.static_planes = static_planes;
+                obj.mass = (4/3)*pi*(obj.r.^3)*obj.rho.*ones(obj.n_dem,1);
+            end
+            
         end
         
-        function obj = flowFirstPhase(obj)
-            % Clear physics grid
-            obj.physics_grid = clearPhysicsGrid(obj.physics_grid);
-
-            % Grid: Project mass to grid
-            obj.physics_grid.rasterized_mass = rasterizeMassToGrid( obj.physics_grid.min, obj.physics_grid.delta, ...
-                obj.physics_grid.num_grid_nodes, obj.mpm_points.q,obj.mpm_points.mass,obj.mpm_points.num_points,obj.basis_functions );
-
-            % Grid: Project momentum to grid
-            obj.physics_grid.rasterized_momentum = rasterizeMomentumToGrid( obj.physics_grid.min, obj.physics_grid.delta, ...
-                obj.physics_grid.num_grid_nodes, obj.mpm_points.q,obj.mpm_points.momentum,obj.mpm_points.num_points,obj.basis_functions );
-
-            % Points: Update point volume
-            for pt_num = 1:obj.mpm_points.num_points
-                obj.mpm_points.volume(pt_num) = obj.mpm_points.volume(pt_num).*exp(obj.del_t*trace(squeeze(obj.mpm_points.vel_grad(pt_num,:,:))));
+%         function obj = dem_state_new(n_dem,domain_min,domain_max,r_mean,r_sigma,k_n,k_t,gamma_n,gamma_t,rho,mu,static_planes)
+%             rngseed = 123;
+%             rng(rngseed);
+%             obj.k_n = k_n; obj.k_t = k_t; obj.gamma_n = gamma_n; obj.gamma_t = gamma_t; 
+%             obj.rho = rho; obj.mu = mu;
+%             [obj.q,obj.r] = generateInitialPointPositionsAndRadiiVoxel( n_dem,r_mean,r_sigma,domain_min,domain_max,rngseed );
+%             [obj.n_dem,~] = size(obj.q);
+%             % Initialize random velocities
+%             obj.v = rand(n_dem,3);
+%             obj.F = zeros(n_dem,3);
+%             [obj.contact_sphere_sphere_old, obj.contact_sphere_plane_old] = intializeContacts();
+%             [obj.contact_sphere_sphere, obj.contact_sphere_plane] = intializeContacts();
+%             obj.static_planes = static_planes;
+%             obj.mass = (4/3)*pi*(obj.r.^3)*obj.rho.*ones(obj.n_dem,1);
+%         end
+%         
+        function obj = flow(obj)
+            r_mean = mean(obj.r);
+            obj.F = zeros(obj.n_dem,3);
+            % Apply gravity
+            for kk = 1:obj.n_dem
+                obj.F(kk,:) = obj.F(kk,:) + obj.mass(kk)*obj.g;
             end
 
-            % Points: Update stress
-        %     obj.mpm_points = computeHypoelasticCauchyStressMuOfI(obj.mpm_points,material_properties,del_t);
-            obj.mpm_points = computeHypoelasticCauchyStressLinearElastic(obj.mpm_points,obj.material_properties,obj.del_t);
+            [obj.contact_sphere_sphere, obj.contact_sphere_plane] = intializeContacts();
 
-            % Grid: Project forces to grid
-            obj.physics_grid.rasterized_forces = computeForces( obj.physics_grid.min, obj.physics_grid.delta, obj.physics_grid.num_grid_nodes, ...
-                obj.physics_grid.rasterized_mass, obj.mpm_points.q,obj.mpm_points.sigma,obj.mpm_points.volume,obj.mpm_points.num_points,obj.basis_functions,obj.g );
+            % Set up bounding boxes
+            aabb_min = obj.q - obj.r;
+            aabb_max = obj.q + obj.r;
 
-            % Grid: Update grid momentum
-            obj.physics_grid.rasterized_momentum_post_force = obj.physics_grid.rasterized_momentum + obj.del_t * obj.physics_grid.rasterized_forces;
-        %     physics_grid.rasterized_momentum_post_force(physics_grid.rasterized_momentum_post_force<0)
+            % Rasterize bounding boxes to grid
+            grid = rasterizeAABBsToGrid(aabb_min,aabb_max,r_mean);
 
-            % Grid: Resolve collisions with planes
-            obj.physics_grid = resolvePlaneCollisions(obj.physics_grid,obj.static_planes);
-        end
-        
-        function obj = flowSecondPhase(obj)
-            % Grid: Update grid velocity
-            obj.physics_grid.rasterized_velocity = obj.physics_grid.rasterized_momentum_post_force./obj.physics_grid.rasterized_mass;
-            obj.physics_grid.rasterized_velocity(isnan(obj.physics_grid.rasterized_velocity)) = 0;
-            % Grid: Update grid acceleration
-            obj.physics_grid.rasterized_acceleration = (obj.physics_grid.rasterized_momentum_post_force -obj.physics_grid.rasterized_momentum)./(obj.del_t*obj.physics_grid.rasterized_mass);
-            obj.physics_grid.rasterized_acceleration(isnan(obj.physics_grid.rasterized_acceleration)) = 0;
+            % Find sphere_sphere contacts
+            obj.contact_sphere_sphere = findSphereSphereCollisionsUsingGrid( obj.contact_sphere_sphere,obj.contact_sphere_sphere_old, grid,obj.q,obj.r,obj.v,obj.del_t );
 
-            % Points: Update velocity gradient
-            obj.mpm_points.vel_grad = computeVelocityGradient( obj.physics_grid.min, obj.physics_grid.delta,...
-                obj.physics_grid.num_grid_nodes, obj.physics_grid.rasterized_velocity,obj.mpm_points.q,obj.mpm_points.num_points,obj.basis_functions );
+            % Find sphere_plane contacts
+            obj.contact_sphere_plane = findSpherePlaneCollisionsBruteForce( obj.contact_sphere_plane,obj.contact_sphere_plane_old, obj.static_planes,obj.q,obj.r,obj.v,obj.del_t );
 
-            % Points: Update velocities
-            [obj.mpm_points.vel,obj.mpm_points.momentum] = updatePointVelocities( obj.physics_grid.min, obj.physics_grid.delta,...
-                obj.physics_grid.num_grid_nodes, obj.physics_grid.rasterized_velocity,obj.physics_grid.rasterized_acceleration, ...
-                obj.mpm_points.q,obj.mpm_points.vel,obj.mpm_points.mass,obj.mpm_points.num_points,obj.basis_functions, obj.del_t, obj.flip_weight);
+            % Calculate forces from sphere-sphere contacts
+            [obj.F,obj.contact_sphere_sphere] = calculateSphereSphereForces(obj.F,obj.contact_sphere_sphere,obj.mass,obj.k_n,obj.k_t,obj.gamma_n,obj.gamma_t,obj.mu);
 
-            % Points: Update positions
-            obj.mpm_points.q = updatePointPositions( obj.physics_grid.min, obj.physics_grid.delta,...
-                obj.physics_grid.num_grid_nodes, obj.physics_grid.rasterized_velocity, ...
-                obj.mpm_points.q,obj.mpm_points.num_points,obj.basis_functions, obj.del_t);
+            % Calculate forces from sphere-plane contacts
+            [obj.F,obj.contact_sphere_plane] = calculateSpherePlaneForces(obj.F,obj.contact_sphere_plane,obj.mass,obj.k_n,obj.k_t,obj.gamma_n,obj.gamma_t,obj.mu);
 
-            % Points: Resolve plane collisions
-            obj.mpm_points = resolvePlanePointCollisions(obj.mpm_points,obj.static_planes);
+            % Cache old contacts
+            obj.contact_sphere_sphere_old = obj.contact_sphere_sphere;
+            obj.contact_sphere_plane_old = obj.contact_sphere_plane;
+
+            % Calculate new velocities (momentum update, forward euler)
+            for kk = 1:obj.n_dem
+                obj.v(kk,:) = obj.v(kk,:) + obj.del_t*(1/obj.mass(kk))*obj.F(kk,:);
+            end
+
+            % Calculate new positions
+            obj.q = obj.q + obj.del_t*obj.v;
         end
     end
 end

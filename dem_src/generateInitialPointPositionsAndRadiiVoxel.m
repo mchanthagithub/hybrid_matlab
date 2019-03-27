@@ -1,7 +1,7 @@
 function [q,r] = generateInitialPointPositionsAndRadiiVoxel( n_dem,r_mean,r_sigma,domain_min,domain_max,rngseed )
 rng(rngseed)
 q = zeros(0,0);
-r = normrnd(r_mean,r_sigma,1,n_dem);
+r = normrnd(r_mean,r_sigma,n_dem,1);
 r_max = max(r);
 d_max = r_max*2.2;
 domain_diff = domain_max - domain_min;
@@ -23,7 +23,7 @@ while(ctr <= n_dem)
     z_coord = z_coord + d_max;
 end
 
-r = normrnd(r_mean,r_sigma,1,ctr-1);
+r = normrnd(r_mean,r_sigma,ctr-1,1);
 
 end
 

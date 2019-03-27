@@ -1,9 +1,8 @@
 function [ contact_sphere_plane ] = findSpherePlaneCollisionsBruteForce( contact_sphere_plane,contact_sphere_plane_old,static_planes,q,r,v,del_t )
 [n_dem,~] = size(q);
-[n_static_planes,~] = size(static_planes);
 % Look for sphere-plane contacts
     for kk = 1:n_dem
-        for jj = 1:n_static_planes
+        for jj = 1:static_planes(1).num
             diff = q(kk,:) - static_planes(jj).q;
             dist = dot(static_planes(jj).n,diff);
             if(dist < r(kk))
