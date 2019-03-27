@@ -3,12 +3,21 @@ classdef dem_state
     %   Detailed explanation goes here
     
     properties
-        q;
-        r;
+        q; % Position
+        r; % radii
+        v; % velocities
         contact_sphere_sphere;
-        contact_plane_sphere;
+        contact_sphere_plane;
+        contact_sphere_sphere_old; % sphere-sphere contact cache
+        contact_sphere_plane_old; % sphere-plane contact cache
         static_planes;
-        F;
+        k_n; % normal spring stiffness coeff
+        k_t; % tangential spring stifness coeff
+        gamma_n; % normal damping coeff
+        gamma_t; % tangential damping coeff
+        rho; % density 
+        mu; % friction coefficient
+        F; % Forces
         t_final = 0.4;
         del_t = 0.0002;
         g = [0 0 -9.81];
